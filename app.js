@@ -1,18 +1,30 @@
 const fs = require('fs');
 const express = require('express');
+const morgan = require('morgan');
 
 const app = express();
 
 app.use(express.json());
 
+app.use((req, res, next) => {
+  console.log('Hello from the middleware 👋');
+  const reqTime = new Date().toISOString();
+  next();
+});
+
 const tours = JSON.parse(
   fs.readFileSync(`${__dirname}/dev-data/data/tours-simple.json`, 'utf-8')
 );
 
+const getAllTours = (req, res) => {
+  res.status(200).json({
+    status: 'success',
+    results: tours.length,
+    data: { tours },
+  });
+};
 
-
-
-app.post('/api/v1/tours', (req, res) => {
+const createTour = (req, res) => {
   const newId = tours[tours.length - 1].id + 1;
   const newTour = Object.assign({ id: newId }, req.body);
   tours.push(newTour);
@@ -26,9 +38,9 @@ app.post('/api/v1/tours', (req, res) => {
       });
     }
   );
-});
+};
 
-app.get('/api/v1/tours/:id', (req, res) => {
+const getTour = (req, res) => {
   // convert the string to a number
   const id = +req.params.id;
   const tour = tours.find((el) => el.id === id);
@@ -44,9 +56,9 @@ app.get('/api/v1/tours/:id', (req, res) => {
     status: 'success',
     data: { tour },
   });
-});
+};
 
-app.patch('/api/v1/tours/:id', (req, res) => {
+const updateTour = (req, res) => {
   // convert the string to a number
   const id = +req.params.id;
   if (Number.isNaN(id)) {
@@ -83,8 +95,9 @@ app.patch('/api/v1/tours/:id', (req, res) => {
       });
     }
   );
-});
-app.delete('/api/v1/tours/:id', (req, res) => {
+};
+
+const deleteTour = (req, res) => {
   // convert the string to a number
   const id = +req.params.id;
   if (Number.isNaN(id)) {
@@ -94,7 +107,7 @@ app.delete('/api/v1/tours/:id', (req, res) => {
     });
   }
 
-  const  updatedTours = tours.filter((el) => el.id !== id);
+  const updatedTours = tours.filter((el) => el.id !== id);
 
   fs.writeFile(
     `${__dirname}/dev-data/data/tours-simple.json`,
@@ -108,21 +121,18 @@ app.delete('/api/v1/tours/:id', (req, res) => {
       }
       res.status(204).json({
         status: 'success',
-        data:null,
+        data: null,
       });
     }
   );
-});
+};
 
-app.get('/api/v1/tours', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    results: tours.length,
-    data: { tours },
-  });
-});
-
-
+ app.route('/api/v1/tours').get(getAllTours).post(createTour);
+app
+  .route('/api/v1/tours/:id')
+  .get(getTour)
+  .patch(updateTour)
+  .delete(deleteTour);
 
 const port = 3000;
 app.listen(port, () => {
